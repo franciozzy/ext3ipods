@@ -1,0 +1,135 @@
+-------------------------------------------------------------
+ IFM LKM - iPODS Filesystem Manager - Loadable Kernel Module
+-------------------------------------------------------------
+  ifm_lkm.c
+-------------------------------------------------------------
+ Disclaimer:
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  This is an experimental code that interferes with the way the Linux
+  kernel handles data on a filesystem. Its usage on real applications
+  is not recommended at this stage. Use it at your own risk.
+
+-------------------------------------------------------------
+ Description:
+  This module provides on-the-fly management for a mounted ext3ipods filesystem.
+  It provides means for:
+  - Fetching general filesystem information.
+  - Fetching datablock numbers associated with inodes.
+  - Fetching and setting QoS attributes to block groups.
+  - Evaluating block group allocation scores.
+  It communicates with userspace through a character device. A program should
+  write to the device and then read from it until EOF to get the response for
+  a command (see Usage).
+
+-------------------------------------------------------------
+ Usage:
+  After compiling, load the module and find out which major number it uses:
+  # modprobe ifm_lkm
+  # dmesg | grep "ifm registered"
+
+  Create a character device with that major (e.g. 250) and minor 0:
+  # mknod /dev/ifm c 250 0
+
+  Write one command and read the response for it:
+  # echo "info" > /dev/ifm
+  # cat /dev/ifm
+
+  See below for a list of supported commands.
+
+-------------------------------------------------------------
+ General notes:
+ Note 1:
+  This module will assume there is one and only one ext3ipods mounted
+  filesystem. Unmounting the filesystem while the character device is
+  opened will lead to unexpected behaviour and is likely to cause a
+  kernel panic and possible loss of data.
+
+ Note 2:
+  This is a list of supported commands:
+    info
+       Print general information regarding the mounted filesystem.
+    getXX
+       Request the inode data for all inodes, beginning at inode XX.
+    setXX:YY
+       Set the block group XX QoS flagset to YY.
+    evalXX
+       This will evaluate the allocation quality for all block groups,
+       beginning at block group XX.
+
+ Note 3:
+  The userspace program can then close the device and reopen it in read mode or,
+  if it was already openned in "r+" mode, read from the device. The userspace
+  program should keep reading from the device until read() returns zero.
+
+ Note 4:
+  This is a list for the output of each command:
+    info
+       Number of blocks per group
+       Total number of groups in the filesystem
+       Flagset for block group 0
+       Flagset for block group 1
+       ...
+       Flagset for block group n
+    getXX
+       A list of inodes with the associated flagset and the datablocks in use.
+       The format of the list is:
+       inode_number flagset: block1 block2 block3 ...
+    setXX:YY
+       No output will be available and no error detection is currently supported.
+    evalXX
+       A list on the evaluated allocation quality for each block group.
+
+-------------------------------------------------------------
+ ChangeLog
+
+ 2009.02.18 - Felipe Franciosi
+  - Loadeable module capable of reading/writing to a chardev.
+
+ 2009.02.19 - Felipe Franciosi
+  - Integration with ifm_tui and ifm_gui.
+  - Dump general filesystem information to UIs.
+
+ 2009.02.25 - Felipe Franciosi
+  - Scans all the inode bitmaps and dump the size of every inode in use.
+
+ 2009.02.27 - Felipe Franciosi
+  - Fixed endianness issues.
+  - Dump datablocks in use by each inode.
+
+ 2009.03.02 - Felipe Franciosi
+  - One inode per read; supports any number of inodes.
+  - Suports 1, 2 and 3 indirect addressing.
+
+ 2009.03.10 - Felipe Franciosi
+  - Fixed 'msg' truncation when inode->i_blocks is really big.
+  - Fixed missing blocks in 'msg' when reentring device_read().
+  - Fixed bug where inodes using only one datablock were shown as empty.
+  - Support any read() with length of at least IFM_MIN_READLEN.
+
+ 2009.03.30 - Felipe Franciosi
+  - Evaluates block group usage (eval command).
+
+ 2009.09.22 - Felipe Franciosi
+  - Runs on 64bit architecture.
+  - Support different blocksizes.
+
+ 2010.01.25 - Felipe Franciosi
+  - Included read AND write performance QoS support.
+
+ 2010.02.02 - Felipe Franciosi
+  - Fixed bugs related to blocksize which prevented evaluation
+    of filesystems with large inode-in-use count.
+
+-------------------------------------------------------------
