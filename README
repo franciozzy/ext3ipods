@@ -39,9 +39,9 @@
   ext3ipods <not yet present>
     This is the implementation of the ext3ipods filesystem.
 
-  e2fsprogs-ipods <not yet present>
+  e2fsprogs-1.41.12-ipods
     This is a modified version of e2fsprogs with added support for
-    the management of QoS flags in inodes.
+    the management of QoS flags in inodes (and removed ext4fs support).
 
   ipods-visualiser <not yet present>
     This is a collection of tools to visualise data allocation
